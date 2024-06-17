@@ -63,6 +63,7 @@
     "webpack": "^5.66.0"
   },
   "peerDependencies": {
+    "@vivliostyle/cli": "^8.12.1",
     "@zenml/xmldom": "^1.1.0",
     "@zenml/zenml": "^1.3.0",
     "@zenml/zotica": "^1.1.0"

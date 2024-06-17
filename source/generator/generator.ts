@@ -3,6 +3,9 @@
 import {DOMImplementation} from "@zenml/xmldom";
 import {ZenmlParser, ZenmlPluginManager, measureAsync} from "@zenml/zenml";
 import chalk from "chalk";
+import {exec} from "child_process";
+import chokidar from "chokidar";
+import commandLineArgs from "command-line-args";
 import fs from "fs/promises";
 import pathUtil from "path";
 import sass from "sass";
@@ -23,11 +26,20 @@ export class VivliostyleGenerator {
   }
 
   public async execute(): Promise<void> {
-    const options = {};
+    const options = commandLineArgs([
+      {name: "watch", alias: "w", type: Boolean},
+      {name: "view", alias: "v", type: Boolean}
+    ]);
     this.parser = this.createParser();
     this.transformer = this.createTransformer();
     this.options = options;
-    await this.executeNormal();
+    if (options.watch) {
+      await this.executeWatch();
+    } if (options.view) {
+      await this.executeView();
+    } else {
+      await this.executeNormal();
+    }
   }
 
   private async executeNormal(): Promise<void> {
@@ -35,6 +47,32 @@ export class VivliostyleGenerator {
     await Promise.all(documentPaths.map(async (documentPath) => {
       await this.saveNormal(documentPath);
     }));
+  }
+
+  private async executeWatch(): Promise<void> {
+    const documentPaths = await this.getDocumentPaths();
+    await new Promise((resolve, reject) => {
+      const watcher = chokidar.watch(documentPaths, {persistent: true, ignoreInitial: true});
+      watcher.on("change", (documentPath) => {
+        this.saveNormal(documentPath);
+      });
+      watcher.on("error", (error) => {
+        reject(error);
+      });
+    });
+  }
+
+  private async executeView(): Promise<void> {
+    const outputPath = pathUtil.join(this.configs.outputDirPath, "manuscript.html");
+    await new Promise<void>((resolve, reject) => {
+      exec(`vivliostyle preview ${outputPath}`, (error, stdout, stderr) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve();
+        }
+      });
+    });
   }
 
   private async saveNormal(documentPath: string): Promise<void> {
