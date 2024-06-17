@@ -11,7 +11,7 @@ import {VivliostyleDocument} from "./dom";
 import {VivliostyleTemplateManager, VivliostyleTransformer} from "./transformer";
 
 
-export class VivlostyleGenerator {
+export class VivliostyleGenerator {
 
   private parser!: ZenmlParser;
   private transformer!: VivliostyleTransformer;

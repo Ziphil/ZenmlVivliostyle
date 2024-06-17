@@ -14,7 +14,10 @@
   },
   "eslintConfig": {
     "extends": "ziphil",
-    "ignorePatterns": "webpack-*.ts"
+    "ignorePatterns": "webpack-*.ts",
+    "rules": {
+      "arrow-body-style": "off"
+    }
   },
   "devDependencies": {
     "@types/chalk": "^2.2.0",
