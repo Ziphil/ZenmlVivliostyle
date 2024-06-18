@@ -10,6 +10,7 @@ import fs from "fs/promises";
 import pathUtil from "path";
 import sass from "sass";
 import {SourceSpan as SassSourceSpan} from "sass";
+import defaultPluginManagers from "../plugin";
 import {VivliostyleDocument} from "./dom";
 import {VivliostyleTemplateManager, VivliostyleTransformer} from "./transformer";
 
@@ -154,6 +155,9 @@ export class VivliostyleGenerator {
     const implementation = new DOMImplementation();
     const parser = new ZenmlParser(implementation, {specialElementNames: {brace: "x", bracket: "xn", slash: "i"}});
     for (const manager of this.configs.pluginManagers ?? []) {
+      parser.registerPluginManager(manager);
+    }
+    for (const manager of defaultPluginManagers) {
       parser.registerPluginManager(manager);
     }
     return parser;
