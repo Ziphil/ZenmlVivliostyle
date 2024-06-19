@@ -29,6 +29,7 @@ export class VivliostyleGenerator {
   public async execute(): Promise<void> {
     const options = commandLineArgs([
       {name: "watch", alias: "w", type: Boolean},
+      {name: "build", alias: "b", type: Boolean},
       {name: "view", alias: "v", type: Boolean}
     ]);
     this.parser = this.createParser();
@@ -36,7 +37,9 @@ export class VivliostyleGenerator {
     this.options = options;
     if (options.watch) {
       await this.executeWatch();
-    } if (options.view) {
+    } else if (options.build) {
+      await this.executeBuild();
+    } else if (options.view) {
       await this.executeView();
     } else {
       await this.executeNormal();
@@ -65,6 +68,20 @@ export class VivliostyleGenerator {
       });
       watcher.on("error", (error) => {
         reject(error);
+      });
+    });
+  }
+
+  private async executeBuild(): Promise<void> {
+    const outputPath = pathUtil.join(this.configs.outputDirPath, "manuscript.html");
+    const finalOutputPath = pathUtil.join(this.configs.outputDirPath, "book.pdf");
+    await new Promise<void>((resolve, reject) => {
+      exec(`vivliostyle build ${outputPath} -o ${finalOutputPath}`, (error, stdout, stderr) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve();
+        }
       });
     });
   }
