@@ -51,11 +51,17 @@ export class VivliostyleGenerator {
   }
 
   private async executeWatch(): Promise<void> {
-    const documentPaths = await this.getDocumentPaths();
+    const watchDirPath = this.configs.watchDirPath;
     await new Promise((resolve, reject) => {
-      const watcher = chokidar.watch(documentPaths, {persistent: true, ignoreInitial: true});
+      const watcher = chokidar.watch(watchDirPath, {persistent: true, ignoreInitial: true});
       watcher.on("change", (documentPath) => {
-        this.saveNormal(documentPath);
+        if (documentPath.match(/\.zml$/)) {
+          const documentPath = this.configs.manuscriptPath;
+          this.saveNormal(documentPath);
+        } else if (documentPath.match(/\.scss$/)) {
+          const documentPath = this.configs.stylePath;
+          this.saveNormal(documentPath);
+        }
       });
       watcher.on("error", (error) => {
         reject(error);
@@ -196,6 +202,7 @@ export type VivliostyleConfigs = {
   templateManagers?: Array<VivliostyleTemplateManager>,
   manuscriptPath: string,
   stylePath: string,
+  watchDirPath: string,
   outputDirPath: string,
   errorLogPath: string
 };
