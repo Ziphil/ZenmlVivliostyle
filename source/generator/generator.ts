@@ -3,15 +3,19 @@
 import {DOMImplementation} from "@zenml/xmldom";
 import {ZenmlParser, ZenmlPluginManager, measureAsync} from "@zenml/zenml";
 import chalk from "chalk";
+import {exec} from "child_process";
+import chokidar from "chokidar";
+import commandLineArgs from "command-line-args";
 import fs from "fs/promises";
 import pathUtil from "path";
 import sass from "sass";
 import {SourceSpan as SassSourceSpan} from "sass";
+import defaultPluginManagers from "../plugin";
 import {VivliostyleDocument} from "./dom";
 import {VivliostyleTemplateManager, VivliostyleTransformer} from "./transformer";
 
 
-export class VivlostyleGenerator {
+export class VivliostyleGenerator {
 
   private parser!: ZenmlParser;
   private transformer!: VivliostyleTransformer;
@@ -23,11 +27,23 @@ export class VivlostyleGenerator {
   }
 
   public async execute(): Promise<void> {
-    const options = {};
+    const options = commandLineArgs([
+      {name: "watch", alias: "w", type: Boolean},
+      {name: "build", alias: "b", type: Boolean},
+      {name: "view", alias: "v", type: Boolean}
+    ]);
     this.parser = this.createParser();
     this.transformer = this.createTransformer();
     this.options = options;
-    await this.executeNormal();
+    if (options.watch) {
+      await this.executeWatch();
+    } else if (options.build) {
+      await this.executeBuild();
+    } else if (options.view) {
+      await this.executeView();
+    } else {
+      await this.executeNormal();
+    }
   }
 
   private async executeNormal(): Promise<void> {
@@ -35,6 +51,52 @@ export class VivlostyleGenerator {
     await Promise.all(documentPaths.map(async (documentPath) => {
       await this.saveNormal(documentPath);
     }));
+  }
+
+  private async executeWatch(): Promise<void> {
+    const watchDirPath = this.configs.watchDirPath;
+    await new Promise((resolve, reject) => {
+      const watcher = chokidar.watch(watchDirPath, {persistent: true, ignoreInitial: true});
+      watcher.on("change", (documentPath) => {
+        if (documentPath.match(/\.zml$/)) {
+          const documentPath = this.configs.manuscriptPath;
+          this.saveNormal(documentPath);
+        } else if (documentPath.match(/\.scss$/)) {
+          const documentPath = this.configs.stylePath;
+          this.saveNormal(documentPath);
+        }
+      });
+      watcher.on("error", (error) => {
+        reject(error);
+      });
+    });
+  }
+
+  private async executeBuild(): Promise<void> {
+    const outputPath = pathUtil.join(this.configs.outputDirPath, "manuscript.html");
+    const finalOutputPath = pathUtil.join(this.configs.outputDirPath, "book.pdf");
+    await new Promise<void>((resolve, reject) => {
+      exec(`vivliostyle build ${outputPath} -o ${finalOutputPath}`, (error, stdout, stderr) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve();
+        }
+      });
+    });
+  }
+
+  private async executeView(): Promise<void> {
+    const outputPath = pathUtil.join(this.configs.outputDirPath, "manuscript.html");
+    await new Promise<void>((resolve, reject) => {
+      exec(`vivliostyle preview ${outputPath}`, (error, stdout, stderr) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve();
+        }
+      });
+    });
   }
 
   private async saveNormal(documentPath: string): Promise<void> {
@@ -118,6 +180,9 @@ export class VivlostyleGenerator {
     for (const manager of this.configs.pluginManagers ?? []) {
       parser.registerPluginManager(manager);
     }
+    for (const manager of defaultPluginManagers) {
+      parser.registerPluginManager(manager);
+    }
     return parser;
   }
 
@@ -154,6 +219,7 @@ export type VivliostyleConfigs = {
   templateManagers?: Array<VivliostyleTemplateManager>,
   manuscriptPath: string,
   stylePath: string,
+  watchDirPath: string,
   outputDirPath: string,
   errorLogPath: string
 };
