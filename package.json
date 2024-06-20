@@ -1,6 +1,6 @@
 {
   "name": "@zenml/vivliostyle",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "author": "Ziphil",
   "description": "Utilities for generating a book using Vivlostyle",
   "homepage": "https://github.com/Ziphil/ZenmlVivliostyle",
